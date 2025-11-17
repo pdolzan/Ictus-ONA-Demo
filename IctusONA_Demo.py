@@ -53,7 +53,7 @@ st.write("""
 tokrat s pomočjo znanih likov iz filmov. Izberite, komu bi zaupali, s kom bi sodelovali in kdo
 bo vaš vir informacij. Rezultat je vizualna predstavitev omrežja, ki prikazuje, kako se lahko ONA
 uporablja za razumevanje dinamike v skupinah in organizacijah. 
-         (Ustvarjeno z Python s pomočjo ChatGPT-ja objavljeno na Streamlit-u)*
+         (Ustvarjeno v Python-u s pomočjo ChatGPT-ja objavljeno na Streamlit-u)*
         """)
 st.markdown("<hr style='border: 1px dashed   #fac108; margin: 1rem 0;'>", unsafe_allow_html=True)
 st.write("")
