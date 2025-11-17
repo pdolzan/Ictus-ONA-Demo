@@ -205,7 +205,7 @@ mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
 with tab2:
     st.write("")
     st.write(
-        "Za vse junake smo pripravili sklop treh vprašanj, ki nam bodo v pomoč pri razumevanju kakšni so odnosi vaši druščini. " \
+        "Za vse junake smo pripravili sklop treh vprašanj, ki nam bodo v pomoč pri razumevanju kakšni so odnosi v vaši druščini. " \
         "Pri vsakem vprašanju je seznam vseh članov druščine.  Prosimo, da pri vsakem vprašanju izberete" \
         ", **komu zaupate**, **koga bi prosili za nasvet** in **kdo je vaš prijatelj**. "
         "Vsako vprašanje lahko odprete ali zaprete za lažji pregled." \
@@ -386,7 +386,7 @@ with tab3:
     st.write("Na podlagi vaših odgovorov in odgovorov vaše druščine smo sestavili podatkovne matrike. "
              "V podatkovnih matrikah so povezave označene numerično z **1** ob ustreznem paru imen. Matrika ni simetrična "
              "saj tudi povezave niso vedno vzajemne. "
-    "V zadnji matriki smo združili vse prejšnje tri skupaj in nam bo služila za prikaz vrednostnega omrežja. "
+    "Vse predhodne matrike smo združili v zadnjo skupno matriko, ki nam bo služila za prikaz vrednostnega omrežja. "
    "V vrednostnem omrežju so povezave ovrednotene. Oseba, ki se pojavi v vseh treh matrikah je v naši druščini zelo pomembna. "
    "Saj je za ostale zaupanje vreden vir informacij in ga obravnavajo kot prijatelja.")
 
@@ -433,7 +433,7 @@ with tab4:
         "sodelovanje obojestransko. To nam pomaga razumeti, kdo so vplivneži in katalizatorji. Junaki, " \
         "ki morda niso formalno vodilni ali najbolj glasni, a znajo posredovati informacije in ideje ter " \
         "jih širiti po celotni druščini. Na te junake se lahko obrnemo, kadar želimo, da sporočilo ali nova" \
-        " ideja doseže čim več članov ekipe. ONA analiza nam omogoča, da prepoznamo ključne povezovalce, " \
+        " ideja doseže čim več članov ekipe. ONA nam omogoča, da prepoznamo ključne povezovalce, " \
         "povečamo sodelovanje in zagotovimo, da ekipa deluje učinkovito ter usklajeno, kar je odločilno, " \
         "če želimo skupaj rešiti svet."
     )
