@@ -26,6 +26,9 @@ ASSETS = Path("images")
 st.set_page_config(page_title="ICTUS ONA Demo", layout="centered", page_icon=str(ASSETS/"icon.png"))
 plt.rcParams["font.serif"] = ["DejaVu Serif"]  # cross-platform
 
+
+
+
 st.markdown(
     """
     <h2 style='color:#fffff; font-size:40px;'>Čaka vas nova pustolovščina!</h2>
@@ -56,16 +59,18 @@ st.markdown("<hr style='border: 1px dashed   #fac108; margin: 1rem 0;'>", unsafe
 st.write("")
 st.write("")
 
+
+
 # --- Tabs
-tab1, tab2, tab3, tab4, tab7, tab5, tab6 = st.tabs(
-    [ "Hierarhija","Vprašalnik", "Matrike", "Omrežje","Interaktivni UV", "ONA Aplikacije","Ictus Vizitka" ])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
+    [ "Hierarhija","Vprašalnik", "Matrike", "Omrežje", "ONA Aplikacije","Ictus Vizitka", "Interactive"])
 
 st.markdown(
     """
     <style>
     /* Tab label font style */
     button[data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
-        font-size: 15px !important;
+        font-size: 16px !important;
         font-weight: 600 !important;
         color: #003A6E !important;  /* text color */
         margin-right: 3px !important;
@@ -91,21 +96,27 @@ with tab1:
         "Vaša druščina junakov in njena hierarhična struktura odločanja."
     )
 
+    # apply the compact table css in a scoped container and render the static md table
     from streamlit.components.v1 import html
 
     html("""
         <div id="hier-table">
         <style>
+            /* Ensure the outer container is white */
             #hier-table {
                 background-color: white !important;
                 padding: 0;
             }
+
+            /* Table styling */
             #hier-table table {
                 width: 100%;
                 border-collapse: collapse;
                 margin-top: 0px;
                 background-color: white !important;
             }
+
+            /* Header and cell styling */
             #hier-table th, #hier-table td {
                 padding: 4px 6px;
                 text-align: left;
@@ -114,12 +125,14 @@ with tab1:
                 font-size: 12px;
                 line-height: 0.9;
                 background-color: white !important;
-                color: black !important;
+                color: black !important;  /* ensures text is visible in dark mode */
             }
+
             #hier-table th {
                 font-weight: 600;
             }
         </style>
+        
          <table>
             <thead>
                 <tr>
@@ -151,6 +164,7 @@ with tab1:
         </table>
         </div>
         """, height=400)
+
 
     import streamlit.components.v1 as components
 
@@ -218,6 +232,7 @@ with tab2:
                 if checked:
                     trust_selection.append(name)
 
+        # Sync to session_state
         st.session_state["trust"] = trust_selection
 
     # ---------- ADVICE ----------
@@ -254,62 +269,59 @@ with tab2:
 
         st.session_state["friends"] = friends_selection
 
+    # Optional: display current selections for debugging
+    #with st.expander("🔍 Preglej trenutne izbire"):
+    #    st.write("**Zaupanje:**", st.session_state["trust"])
+    #    st.write("**Nasveti:**", st.session_state["advice"])
+    #   st.write("**Prijatelji:**", st.session_state["friends"])
+
 # --- FUNKCIJA ZA USTVARJANJE MATRICE (non-symmetrical) ---
-def create_matrix(user_selection, density=0.15, reciprocity_rate=0.3, others_matrix=None):
+def create_matrix(user_selection, density=0.15, reciprocity_rate=0.3):
     """
     Ustvari nesimetrično matriko, ki vsebuje uporabnikove izbire in
     naključne izbire ostalih likov, z možnostjo določene stopnje reciprocitete.
-
+    
     Parameters:
         user_selection: list of characters selected by the user
         density: fraction of possible edges each character will have
         reciprocity_rate: fraction of edges that will be reciprocated
-        others_matrix: if provided, this np.array (shape (n-1, n)) is used as precomputed choices for non-user rows (i>0)
     """
     n = len(all_names)
     matrix = np.zeros((n, n), dtype=int)
+
     user_idx = 0  # TU STE VI
 
-    # --- User selections → always update this row
+    # 1️⃣ User selections → freeze this row later
     for selected_name in user_selection:
         if selected_name in characters:
             j = all_names.index(selected_name)
             matrix[user_idx, j] = 1
 
-    # --- All other choices: fixed for session via others_matrix
-    if others_matrix is None:
-        # Build random choices for all other nodes if not given
-        for i in range(1, n):
-            num_choices = max(1, int(density * (n - 1)))
-            possible = [name for name in all_names if name != all_names[i]]
-            choices = random.sample(possible, num_choices)
-            for chosen in choices:
-                j = all_names.index(chosen)
-                matrix[i, j] = 1
+    # 2️⃣ Random choices for OTHER characters (i > 0)
+    for i in range(1, n):
+        num_choices = max(1, int(density * (n - 1)))
+        possible = [name for name in all_names if name != all_names[i]]
+        choices = random.sample(possible, num_choices)
+        for chosen in choices:
+            j = all_names.index(chosen)
+            matrix[i, j] = 1
 
-        # 3️⃣ Reciprocity — DO NOT modify row 0
-        for i in range(1, n):          # skip user row
-            for j in range(n):
-                if matrix[i, j] == 1 and matrix[j, i] == 0:
-                    # allowed: j == 0 (others → user)
-                    if random.random() < reciprocity_rate:
-                        matrix[j, i] = 1
+    # 3️⃣ Reciprocity — DO NOT modify row 0
+    for i in range(1, n):          # skip user row
+        for j in range(n):
+            if matrix[i, j] == 1 and matrix[j, i] == 0:
+                # allowed: j == 0 (others → user)
+                if random.random() < reciprocity_rate:
+                    matrix[j, i] = 1
 
-        # 4️⃣ Re-freeze the user row (protect user selections)
-        fixed_row = np.zeros(n, dtype=int)
-        for selected_name in user_selection:
-            j = all_names.index(selected_name)
-            fixed_row[j] = 1
-        matrix[user_idx, :] = fixed_row
+    # 4️⃣ Re-freeze the user row (protect user selections)
+    fixed_row = np.zeros(n, dtype=int)
+    for selected_name in user_selection:
+        j = all_names.index(selected_name)
+        fixed_row[j] = 1
+    matrix[user_idx, :] = fixed_row
 
-        # Store other rows for session persistency:
-        others = matrix[1:, :]
-    else:
-        # Use session-stored matrix for others
-        others = others_matrix
-        matrix[1:, :] = others
-
-    return pd.DataFrame(matrix, index=all_names, columns=all_names), others if others_matrix is None else others_matrix
+    return pd.DataFrame(matrix, index=all_names, columns=all_names)
 
 # --- FUNKCIJA ZA USTVARJANJE TABELE ---
 def plot_heatmap_table(matrix, title):
@@ -319,8 +331,10 @@ def plot_heatmap_table(matrix, title):
     x = matrix.columns
     y = matrix.index
 
-    z_color = np.where(z >= 1, 1, 0)
+    # Create a new z_color array: 1 → colored, 0 → white
+    z_color = np.where(z >= 1, 1, 0)  # 1 becomes colored, 0 stays white
 
+    # Heatmap with custom colorscale: 0 = white, 1 = blue (or any color)
     fig = go.Figure(data=go.Heatmap(
         z=z_color,
         x=x,
@@ -333,6 +347,7 @@ def plot_heatmap_table(matrix, title):
         hoverinfo='none'
     ))
 
+    # Add grid lines manually
     shapes = []
     n_rows, n_cols = z.shape
     for i in range(n_rows + 1):
@@ -367,26 +382,35 @@ def plot_heatmap_table(matrix, title):
 
 # --- FUNKCIJA ZA USTVARJANJE MATRIKE LE ENKRAT NA SESION ---
 def update_matrices_if_needed():
-    for matrix_key, selection_key, density, reciprocity in [
-        ("trust_matrix",  "trust",    0.15, 0.2),
-        ("advice_matrix", "advice",   0.15, 0.2),
-        ("friends_matrix","friends",  0.08, 0.3),
-    ]:
-        others_key = f"{matrix_key}_others"
-        if matrix_key not in st.session_state or others_key not in st.session_state:
-            mat, others_mtx = create_matrix(st.session_state[selection_key], density, reciprocity, None)
-            st.session_state[matrix_key] = mat
-            st.session_state[others_key] = others_mtx
-        else:
-            mat, _ = create_matrix(st.session_state[selection_key], density, reciprocity, st.session_state[others_key])
-            st.session_state[matrix_key] = mat
+    # Check whether matrices already exist
+    if "trust_matrix" not in st.session_state:
+        st.session_state["trust_matrix"] = create_matrix(st.session_state["trust"], 0.15, 0.2)
+        st.session_state["advice_matrix"] = create_matrix(st.session_state["advice"], 0.15, 0.2)
+        st.session_state["friends_matrix"] = create_matrix(st.session_state["friends"], 0.08, 0.3)
+        st.session_state["combined_matrix"] = (
+            st.session_state["trust_matrix"] +
+            st.session_state["advice_matrix"] +
+            st.session_state["friends_matrix"]
+        )
+        return
 
-    st.session_state["combined_matrix"] = (
-        st.session_state["trust_matrix"] +
-        st.session_state["advice_matrix"] +
-        st.session_state["friends_matrix"]
-    )
+    # Check if user changed selections
+    if (
+        st.session_state["trust"] != st.session_state.get("last_trust", None) or
+        st.session_state["advice"] != st.session_state.get("last_advice", None) or
+        st.session_state["friends"] != st.session_state.get("last_friends", None)
+    ):
+        # Update matrices
+        st.session_state["trust_matrix"] = create_matrix(st.session_state["trust"], 0.15, 0.2)
+        st.session_state["advice_matrix"] = create_matrix(st.session_state["advice"], 0.15, 0.2)
+        st.session_state["friends_matrix"] = create_matrix(st.session_state["friends"], 0.08, 0.3)
+        st.session_state["combined_matrix"] = (
+            st.session_state["trust_matrix"] +
+            st.session_state["advice_matrix"] +
+            st.session_state["friends_matrix"]
+        )
 
+    # Save snapshot of current answers
     st.session_state["last_trust"] = st.session_state["trust"]
     st.session_state["last_advice"] = st.session_state["advice"]
     st.session_state["last_friends"] = st.session_state["friends"]
@@ -402,12 +426,18 @@ with tab3:
    "Saj je za ostale zaupanje vreden vir informacij in ga obravnavajo kot prijatelja.")
 
     if all(k in st.session_state for k in ["trust", "advice", "friends"]):
+
+        # Ustvari 3 matrike z uporabnikovimi in naključnimi povezavami
         update_matrices_if_needed()
+
+        # Use stored matrices
         trust_matrix = st.session_state["trust_matrix"]
         advice_matrix = st.session_state["advice_matrix"]
         friends_matrix = st.session_state["friends_matrix"]
         combined_matrix = st.session_state["combined_matrix"]
 
+
+        # Display original matrices
         with st.expander("Matrika zaupanja", expanded=False):
             st.write("")
             plot_heatmap_table(trust_matrix,"")
@@ -420,12 +450,14 @@ with tab3:
             st.write("")
             plot_heatmap_table(friends_matrix, "")
 
+        # Combine matrices: element-wise sum
         with st.expander("Združena matrika", expanded=False):
             st.write("")
             plot_heatmap_table(combined_matrix, "")
 
     else:
         st.warning("Najprej izpolnite vprašalnik.")
+
 
 # --- TAB 4 --- Grafi
 with tab4: 
@@ -452,6 +484,7 @@ with tab4:
             "Skupno": st.session_state["combined_matrix"]
         }
 
+        # --- 1️⃣ Compute layouts and normalize coordinate span ---
         forceatlas2 = ForceAtlas2(
             outboundAttractionDistribution=False,
             linLogMode=False,
@@ -469,6 +502,7 @@ with tab4:
         layouts = {}
         all_degrees = []
 
+        # First, compute layout and collect global max degree
         for name, matrix in matrices.items():
             G = nx.DiGraph()
             m = matrix.values
@@ -488,6 +522,7 @@ with tab4:
             ])
             all_degrees.extend(wdeg)
 
+        # Global normalization factors
         global_min_x = min(min(p[0] for p in pos.values()) for pos in layouts.values())
         global_max_x = max(max(p[0] for p in pos.values()) for pos in layouts.values())
         global_min_y = min(min(p[1] for p in pos.values()) for pos in layouts.values())
@@ -496,20 +531,23 @@ with tab4:
 
         def normalize_positions(positions):
             def scale(v, minv, maxv):
-                return (v - minv) / (maxv - minv) * 1000
+                return (v - minv) / (maxv - minv) * 1000  # scale to 0–1000
             return {n: (scale(x, global_min_x, global_max_x), scale(y, global_min_y, global_max_y))
                     for n, (x, y) in positions.items()}
 
         layouts = {k: normalize_positions(v) for k, v in layouts.items()}
 
+        # --- 2️⃣ Plot and Save SVG ---
         def plot_static_network(matrix, title, pos):
             m = matrix.values
             nodes = matrix.index.tolist()
 
+            # Create igraph for metrics
             g = ig.Graph.Adjacency((m > 0).tolist(), mode="directed")
             g.vs["name"] = nodes
             g.es["weight"] = m[m.nonzero()]
 
+            # --- Metrics ---
             indeg = np.array(g.degree(mode="in"))
             outdeg = np.array(g.degree(mode="out"))
             wdeg = np.array(g.strength(weights="weight", mode="all"))
@@ -519,6 +557,7 @@ with tab4:
             cluster_coef = np.array(g.transitivity_local_undirected(mode="zero"))
             coreness = np.array(g.coreness(mode="all"))
 
+            # --- Node stats table ---
             node_stats = pd.DataFrame({
                 "Node": nodes,
                 "Weighted Degree": np.round(wdeg, 3),
@@ -531,6 +570,7 @@ with tab4:
                 "Coreness": coreness,
             }).sort_values("Betweenness", ascending=False)
 
+            # --- Global stats ---
             density = g.density()
             reciprocity = g.reciprocity()
             avg_deg = np.mean(wdeg)
@@ -544,22 +584,30 @@ with tab4:
                 "Shortest Path": [np.round(avg_path, 3)]
             })
 
+            # Build NetworkX for visualization
             G = nx.DiGraph()
             for i, src in enumerate(nodes):
                 for j, tgt in enumerate(nodes):
                     if m[i, j] > 0:
                         G.add_edge(src, tgt, weight=m[i, j])
 
+            # --- Color map ---
             cmap = mcolors.LinearSegmentedColormap.from_list("custom", ["#f9dfb6", "#f9a22b"])
             norm = mcolors.Normalize(vmin=min(btw), vmax=max(btw))
             node_colors = {node: mcolors.to_hex(cmap(norm(b))) for node, b in zip(nodes, btw)}
+
+            # --- Node sizes (normalized globally) ---
             node_sizes = {node: 150 + (w / global_max_degree) * 800 for node, w in zip(nodes, wdeg)}
+
+            # --- Edge color mapping ---
             weight_colors = {1: "#e8e8e8", 2: "#797979", 3: "#3a3a3a"}
 
+            # --- Plot setup ---
             fig, ax = plt.subplots(figsize=(7, 7))
             ax.set_facecolor("white")
             ax.axis("off")
 
+            # --- Draw edges by weight layer ---
             for weight in [1, 2, 3]:
                 for (u, v, d) in G.edges(data=True):
                     if int(d["weight"]) == weight:
@@ -567,12 +615,14 @@ with tab4:
                         x1, y1 = pos[u]
                         x2, y2 = pos[v]
 
+                        # Compute unit vector from source to target
                         dx, dy = x2 - x1, y2 - y1
                         dist = np.sqrt(dx**2 + dy**2)
                         if dist == 0:
                             continue
                         ux, uy = dx / dist, dy / dist
 
+                        # --- Define push distances ---
                         if title.lower().startswith("skupno"):
                             start_offset = 30
                             end_offset = 30
@@ -580,9 +630,11 @@ with tab4:
                             start_offset = 10
                             end_offset = 10
 
+                        # --- Compute adjusted start/end positions ---
                         start = (x1 + ux * start_offset, y1 + uy * start_offset)
                         end = (x2 - ux * end_offset, y2 - uy * end_offset)
 
+                        # --- Draw arrow ---
                         arrow = FancyArrowPatch(
                             start, end,
                             arrowstyle="-|>,head_length=1.6,head_width=0.7",
@@ -594,10 +646,11 @@ with tab4:
                         )
                         ax.add_patch(arrow)
 
+            # --- Draw nodes ---
             for node in nodes:
                 xy = pos.get(node)
                 if xy is None:
-                    continue
+                    continue  # skip missing nodes
                 x, y = xy
                 color = node_colors[node]
                 size = node_sizes[node]
@@ -606,9 +659,10 @@ with tab4:
                 else:
                     ax.scatter(x, y, s=size, color=color, zorder=9, edgecolors=color, linewidths=0.5)
 
+            # --- Draw labels ---
             for node in nodes:
                 if node not in pos:
-                    continue
+                    continue  # Skip if missing from layout
                 x, y = pos[node]
                 if node.lower() == "tu ste vi":
                     ax.text(x, y + 15, "TU STE VI", color="#003a6e", ha="center", va="center",
@@ -617,19 +671,35 @@ with tab4:
                     ax.text(x, y + 8, node, color="black", ha="center", va="center", fontsize=9, zorder=11)
 
             BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+            
+            # Build full path for the SVG (safe on Windows and cloud)
             safe_title = re.sub(r"[^a-zA-Z0-9_-]", "_", title)
             file_name = f"{safe_title}.svg"
             svg_path = os.path.join(BASE_DIR, file_name)
+
+            # Save SVG
             plt.savefig(svg_path, format="svg", dpi=300, bbox_inches='tight')
             plt.close(fig)
+
+            # Load SVG
             with open(svg_path, "r", encoding="utf-8") as f:
                 svg_text = f.read()
+
+            # Display SVG in Streamlit
             st.components.v1.html(svg_text, height=600)
 
             return node_stats, global_stats
 
+            # # Display SVG
+            # st.image(svg_path, width='stretch')
+            # return node_stats, global_stats
+
+
+        # --- 3️⃣ Render All Networks ---
         for i, (name, matrix) in enumerate(matrices.items()):
+            # Only expand the first one
             expanded_state = (i == 0)
+
             with st.expander(f" {name}", expanded=expanded_state):
                 node_stats, global_stats = plot_static_network(matrix, name, layouts[name])
 
@@ -640,22 +710,23 @@ with tab4:
                     st.dataframe(global_stats, width='stretch')
 
         with st.expander("Opis metrik"):
-            st.markdown("""
-            **Node** - Predstavlja posameznika v omrežju, ki ga analiziramo v kontekstu sodelovanja ali komunikacije.  
-            **Weighted Degree** - Pokaže, kako zelo je oseba vključena v omrežje, saj meri skupno količino interakcij ali zahtev, ki jih izmenjuje z drugimi.  
-            **In-Degree** - Kaže, koliko ljudi se obrača na posameznika, kar odraža njegovo zaupanje, strokovnost ali neformalni vpliv.  
-            **Out-Degree** - Pokaže, kako pogosto oseba sama išče informacije, podporo ali sodelovanje pri drugih.  
-            **Betweenness** - Ocenjuje, v kolikšni meri oseba deluje kot most med skupinami, kar je ključno za prenos informacij v omrežju.  
-            **PageRank** - Ocenjuje strateški vpliv osebe glede na to, kako pomembni so ljudje, s katerimi je povezana.  
-            **Closeness** - Pokaže, kako hitro lahko oseba doseže druge v omrežju, kar je pomembno za učinkovito koordinacijo in reševanje nalog.  
-            **Clustering** - Meri, kako tesno povezani so ljudje okoli posameznika, kar razkriva lokalno sodelovanje in zaupanje.  
-            **Coreness** - Ocenjuje, ali je oseba del jedra omrežja ali njegove periferije, kar odraža raven vključenosti v organizacijsko dinamiko.   
-            **Density** - Pokaže, kako povezano je celotno omrežje, kar odraža splošno kulturo sodelovanja ali prisotnost komunikacijskih ovir.  
-            **Reciprocity %** - Izraža, kolikšen delež odnosov je obojestranskih, kar kaže na stabilnost, zaupanje in enakovrednost odnosov.  
-            **Edges** - Predstavlja skupno število vseh medosebnih povezav, kar kaže na splošno aktivnost in povezanost v omrežju.  
-            **Avg. Degree** - Pokaže povprečno vključenost zaposlenih ter daje vpogled v tipično stopnjo sodelovanja v organizaciji.    
-            **Shortest Path** - Ocenjuje povprečno razdaljo med osebami, kar vpliva na hitrost in učinkovitost pretoka informacij v organizaciji.    
-            """)
+                    st.markdown("""
+                    **Node** - Predstavlja posameznika v omrežju, ki ga analiziramo v kontekstu sodelovanja ali komunikacije.  
+                    **Weighted Degree** - Pokaže, kako zelo je oseba vključena v omrežje, saj meri skupno količino interakcij ali zahtev, ki jih izmenjuje z drugimi.  
+                    **In-Degree** - Kaže, koliko ljudi se obrača na posameznika, kar odraža njegovo zaupanje, strokovnost ali neformalni vpliv.  
+                    **Out-Degree** - Pokaže, kako pogosto oseba sama išče informacije, podporo ali sodelovanje pri drugih.  
+                    **Betweenness** - Ocenjuje, v kolikšni meri oseba deluje kot most med skupinami, kar je ključno za prenos informacij v omrežju.  
+                    **PageRank** - Ocenjuje strateški vpliv osebe glede na to, kako pomembni so ljudje, s katerimi je povezana.  
+                    **Closeness** - Pokaže, kako hitro lahko oseba doseže druge v omrežju, kar je pomembno za učinkovito koordinacijo in reševanje nalog.  
+                    **Clustering** - Meri, kako tesno povezani so ljudje okoli posameznika, kar razkriva lokalno sodelovanje in zaupanje.  
+                    **Coreness** - Ocenjuje, ali je oseba del jedra omrežja ali njegove periferije, kar odraža raven vključenosti v organizacijsko dinamiko.   
+                    **Density** - Pokaže, kako povezano je celotno omrežje, kar odraža splošno kulturo sodelovanja ali prisotnost komunikacijskih ovir.  
+                    **Reciprocity %** - Izraža, kolikšen delež odnosov je obojestranskih, kar kaže na stabilnost, zaupanje in enakovrednost odnosov.  
+                    **Edges** - Predstavlja skupno število vseh medosebnih povezav, kar kaže na splošno aktivnost in povezanost v omrežju.  
+                    **Avg. Degree** - Pokaže povprečno vključenost zaposlenih ter daje vpogled v tipično stopnjo sodelovanja v organizaciji.    
+                    **Shortest Path** - Ocenjuje povprečno razdaljo med osebami, kar vpliva na hitrost in učinkovitost pretoka informacij v organizaciji.    
+                                
+                    """)
 
 # --- TAB 5 --- Aplikacije
 with tab5:
@@ -668,6 +739,7 @@ with tab5:
     html("""
         <div id="aplikacija">
         <style>
+            /* Ensure the outer container is white */
             #aplikacija {
                 background-color: white !important;
                 padding: 0;
@@ -695,6 +767,7 @@ with tab5:
                 font-weight: bold;
             }
         </style>
+
         <table>
             <colgroup>
                 <col style="width:15%">
@@ -726,6 +799,7 @@ with tab5:
                     <td>&#x25AA; Kadri prehitro odhajajo</td>
                     <td>&#x0226B; Raziskava razkrije občutek izolacije ali izključenosti, ki vodi v fluktuacijo</td>
                 </tr>
+
                 <tr>
                     <td class="col1" rowspan="4">CEO, vodje podjetij, timski vodje</td>
                     <td>&#x25AA; Ekipa je rasla prehitro in komunikacija se zgošča v nekaj točkah</td>
@@ -743,6 +817,7 @@ with tab5:
                     <td>&#x25AA; Vodstvo (CEO, direktorji) se nezavedno odmakne od preostale ekipe</td>
                     <td>&#x0226B; ONA razkrije, ali so vodje vključeni v vsakdanjo mrežo sodelovanja, ali pa informacije in povezave do njih redko potekajo. Tako lahko aktivno okrepijo prisotnost in vpliv v ključnih točkah sistema</td>
                 </tr>
+
                 <tr>
                     <td class="col1" rowspan="4">Coachi, svetovalci, psihologi</td>
                     <td>&#x25AA; Orgnizacija ne ve, zakaj intervencija ni učinkovita v celotnem timu</td>
@@ -767,9 +842,13 @@ with tab5:
 
 # --- TAB 6 --- Vizitka
 with tab6:
+
+    # Display the image
     st.image(str(ASSETS/"img1.png"), width='stretch')
     st.write("")
     st.markdown("<hr style='border: 1px dashed  #fac108; margin: 1rem 0;'>", unsafe_allow_html=True)
+        # --- Here: single-line links with icons/images ---
+    # Single line links with text only
     links_html = """
     <div style="display:flex; justify-content:center; align-items:center; gap:2rem; font-size:25px;">
         <a href="https://www.ictus.si/" target="_blank"> Spletna stran</a>
@@ -784,81 +863,124 @@ with tab6:
     st.write("")
     st.image(str(ASSETS/"img2.png"), width='stretch')
 
+# --- TAB 7 --- Experimental interctivity
 # --- TAB 7: Interaktivno omrežje ---
 with tab7:
-        st.write("V tem zavihku je na voljo interaktivno orodje za vizualno in podatkovno podprto raziskovanje organizacijskih odnosov. " \
-        "Ponuja pregled izbranih odnosov znotraj druščine (zaupanje, svetovanje, prijateljstvo) ter omogoča analizo vpliva " \
-        "posameznikov na dinamiko sodelovanja. S prilagoditvijo meril, kot so " \
-        "centralnost, povezanost in vloga vozlišč, lahko uporabnik hitro prepozna ključne junake, kritične posrednike informacij ter potencialna tveganja v " \
-        "strukturi komuniciranja. Barve in velikosti vozlišč se samodejno prilagajata glede na izbrane metrike, kar omogoča razumevanje vpliva in vloge junakov. " \
-        "Funkcionalnost vključuje tudi scenarijsko analizo, kjer je mogoče simulirati izstop izbranih junakov ter oceniti, kako bi takšen dogodek " \
-        "vplival na celotno omrežje, povezave in odpornost druščine. Zavihek tako zagotavlja intuitiven, vizualno bogat in strateško uporaben " \
-        "vpogled v organizacijske odnose, ki podpira vodstvene odločitve, prepoznavanje talentov, upravljanje tveganj ter načrtovanje izboljšav v " \
-        "komunikacijskih tokovih.")
-        st.write("**Izberite omrežje:**")
 
-        matrix_options = ["Zaupanje", "Svetovanje", "Prijateljstvo"]
+        st.markdown("""
+        <style>
 
-        # Get the last selection from session_state, or default to first option
-        if "matrix_choice_tab7" not in st.session_state:
-            st.session_state["matrix_choice_tab7"] = matrix_options[0]
+        /* === SCOPE EVERYTHING TO TAB 7 ONLY === */
+        #tab7-scope * {
+            font-size: 11px !important;
+        }
 
-        cols = st.columns(3)
-        for i, opt in enumerate(matrix_options):
-            if cols[i].button(opt, key=f"matrix_btn_{opt}"):
-                st.session_state["matrix_choice_tab7"] = opt
+        /* =====================================================
+        SELECTBOX (closed state)
+        ===================================================== */
+        #tab7-scope div[data-testid="stSelectbox"] label p {
+            font-size: 11px !important;
+        }
 
-        matrix_choice = st.session_state["matrix_choice_tab7"]
-        st.write("")
-        col1, col2 = st.columns(2)
-        with col1:
-            size_metric = st.selectbox(
-                "**Velikost kroga:**",
-                ["Degree", "In-Degree", "Out-Degree", "Betweenness", "Closeness",
-                "PageRank", "Clustering", "Coreness"],
-                index=0,
-                key="size_metric_tab7"
-            )
-        with col2:
-            color_metric = st.selectbox(
-                "**Barva kroga:**",
-                ["Degree", "In-Degree", "Out-Degree", "Betweenness", "Closeness",
-                "PageRank", "Clustering", "Coreness"],
-                index=3,
-                key="color_metric_tab7"
-            )
+        #tab7-scope div[data-testid="stSelectbox"] button span {
+            font-size: 11px !important;
+        }
 
+        /* Box height + padding */
+        #tab7-scope div[data-testid="stSelectbox"] button {
+            min-height: 26px !important;
+            padding: 2px 6px !important;
+        }
+
+        /* =====================================================
+        MULTISELECT (closed state)
+        ===================================================== */
+        #tab7-scope div[data-testid="stMultiSelect"] label p {
+            font-size: 11px !important;
+        }
+
+        #tab7-scope div[data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+            font-size: 10px !important;
+            padding-top: 1px !important;
+            padding-bottom: 1px !important;
+        }
+
+        #tab7-scope div[data-testid="stMultiSelect"] input {
+            font-size: 11px !important;
+        }
+
+        /* Box height */
+        #tab7-scope div[data-testid="stMultiSelect"] > div {
+            min-height: 26px !important;
+        }
+
+        /* =====================================================
+        DROPDOWN MENU — ACTUAL ITEMS (this is what you needed)
+        ===================================================== */
+
+        /* All dropdown item text */
+        #tab7-scope div[role="listbox"] * {
+            font-size: 8px !important;
+            line-height: 1.1 !important;
+        }
+
+        /* Option label text */
+        #tab7-scope div[role="option"],
+        #tab7-scope div[role="option"] p,
+        #tab7-scope div[role="option"] span {
+            font-size: 11px !important;
+            padding-top: 2px !important;
+            padding-bottom: 2px !important;
+        }
+
+        /* =====================================================
+        OPTIONAL: Remove big vertical spacing between controls
+        ===================================================== */
+        #tab7-scope .st-emotion-cache-1lcbmhc,
+        #tab7-scope .st-emotion-cache-1kyxreq,
+        #tab7-scope .st-emotion-cache-1y4p8pa {
+            margin-top: 0px !important;
+            margin-bottom: 0px !important;
+        }
+
+        </style>
+        <div id="tab7-scope">
+        """, unsafe_allow_html=True)
+
+
+        # --- CONTROLS GRAPH (no columns) ---
+
+        matrix_choice = st.selectbox(
+            "Izberi matriko",
+            ["Zaupanje", "Svetovanje", "Prijateljstvo"],
+            index=0,
+            key="matrix_choice_tab7"
+        )
+
+        size_metric = st.selectbox(
+            "Velikost vozlišč (metrika)",
+            ["Degree", "In-Degree", "Out-Degree", "Betweenness", "Closeness",
+            "PageRank", "Clustering", "Coreness"],
+            index=0,
+            key="size_metric_tab7"
+        )
+
+        color_metric = st.selectbox(
+            "Barva vozlišč (metrika)",
+            ["Degree", "In-Degree", "Out-Degree", "Betweenness", "Closeness",
+            "PageRank", "Clustering", "Coreness"],
+            index=3,
+            key="color_metric_tab7"
+        )
 
         removed_nodes = st.multiselect(
-            "**Kaj se zgodi, če junak zapusti druščino:**",
+            "Odstrani vozlišča",
             options=list(all_names),
             default=[],
             key="removed_nodes_tab7"
         )
 
-
-        with st.expander("Opis metrik"):
-            st.markdown("""
-            **Node** - Predstavlja posameznika v omrežju, ki ga analiziramo v kontekstu sodelovanja ali komunikacije.  
-            **Weighted Degree** - Pokaže, kako zelo je oseba vključena v omrežje, saj meri skupno količino interakcij ali zahtev, ki jih izmenjuje z drugimi.  
-            **In-Degree** - Kaže, koliko ljudi se obrača na posameznika, kar odraža njegovo zaupanje, strokovnost ali neformalni vpliv.  
-            **Out-Degree** - Pokaže, kako pogosto oseba sama išče informacije, podporo ali sodelovanje pri drugih.  
-            **Betweenness** - Ocenjuje, v kolikšni meri oseba deluje kot most med skupinami, kar je ključno za prenos informacij v omrežju.  
-            **PageRank** - Ocenjuje strateški vpliv osebe glede na to, kako pomembni so ljudje, s katerimi je povezana.  
-            **Closeness** - Pokaže, kako hitro lahko oseba doseže druge v omrežju, kar je pomembno za učinkovito koordinacijo in reševanje nalog.  
-            **Clustering** - Meri, kako tesno povezani so ljudje okoli posameznika, kar razkriva lokalno sodelovanje in zaupanje.  
-            **Coreness** - Ocenjuje, ali je oseba del jedra omrežja ali njegove periferije, kar odraža raven vključenosti v organizacijsko dinamiko.   
-            **Density** - Pokaže, kako povezano je celotno omrežje, kar odraža splošno kulturo sodelovanja ali prisotnost komunikacijskih ovir.  
-            **Reciprocity %** - Izraža, kolikšen delež odnosov je obojestranskih, kar kaže na stabilnost, zaupanje in enakovrednost odnosov.  
-            **Edges** - Predstavlja skupno število vseh medosebnih povezav, kar kaže na splošno aktivnost in povezanost v omrežju.  
-            **Avg. Degree** - Pokaže povprečno vključenost zaposlenih ter daje vpogled v tipično stopnjo sodelovanja v organizaciji.    
-            **Shortest Path** - Ocenjuje povprečno razdaljo med osebami, kar vpliva na hitrost in učinkovitost pretoka informacij v organizaciji.    
-            """)
-
-
-        st.write("")
-        st.markdown(f"**IZBRANO OMREŽJE:** {matrix_choice}")
-
+        # --- SELECT MATRIX ---
         matrices = {
         "Zaupanje": st.session_state["trust_matrix"],
         "Svetovanje": st.session_state["advice_matrix"],
@@ -867,10 +989,14 @@ with tab7:
 
         M = matrices[matrix_choice].copy()
 
+        # Remove nodes if selected
         if removed_nodes:
             M = M.drop(index=removed_nodes, columns=removed_nodes)
 
+        # BUILD GRAPH
         G = nx.from_pandas_adjacency(M, create_using=nx.DiGraph)
+
+        # --- METRICS ---
         degree = dict(G.degree())
         indeg = dict(G.in_degree())
         outdeg = dict(G.out_degree())
@@ -894,6 +1020,7 @@ with tab7:
             "Coreness": coreness
         }
 
+        # --- COLOR SCALE ---
         def color_for_value(val, vmin, vmax):
             if vmax == vmin:
                 return "#f9dfb6"
@@ -909,77 +1036,20 @@ with tab7:
         min_val = min(color_values.values())
         max_val = max(color_values.values())
 
+        # --- PYVIS NETWORK ---
         net = Network(height="700px", width="100%", bgcolor="white", directed=True)
-        net.barnes_hut()
-
-        # At the top (before your node loop), get metric values
-        metric_vals = np.array(list(metrics[size_metric].values()))
-        # Set desired node size bounds
-        min_size, max_size = 50, 180
-
-        # Handle case where all nodes have the same value (avoid division by zero)
-        if metric_vals.max() == metric_vals.min():
-            norm_sizes = {node: (min_size + max_size)/2 for node in G.nodes()}
-        else:
-            norm_sizes = {
-                node: min_size + (metrics[size_metric][node] - metric_vals.min()) * (max_size - min_size) / (metric_vals.max() - metric_vals.min())
-                for node in G.nodes()
-            }
-
-        info_df = pd.DataFrame([
-            {"Ime": "Deček čarovnik",      "Vloga": "premaga vse izzive",           "# let v druščini": 3},
-            {"Ime": "Mladi pilot",         "Vloga": "pogumni raziskovalec",         "# let v druščini": 1},
-            {"Ime": "Modri ravnatelj",     "Vloga": "vodi druge da so boljši",      "# let v druščini": 10},
-            {"Ime": "Nosilec prstana",     "Vloga": "odgovoren vendar zadržan",     "# let v druščini": 2},
-            {"Ime": "Pametna čarovnica",   "Vloga": "vir znanja in logike",         "# let v druščini": 3},
-            {"Ime": "Pogumna princesa",    "Vloga": "odločna in napredna",          "# let v druščini": 1},
-            {"Ime": "Postopač",            "Vloga": "skriti vodja z notranjim bojem","# let v druščini": 9},
-            {"Ime": "Prebrisani učitelj",  "Vloga": "povezovalec",                  "# let v druščini": 12},
-            {"Ime": "Sivi čarovnik",       "Vloga": "povezuje ljudi in jih vodi",   "# let v druščini": 30},
-            {"Ime": "Temni vitez",         "Vloga": "konfliktna oseba",             "# let v druščini": 13},
-            {"Ime": "Tihotapec",           "Vloga": "samosvoj",                     "# let v druščini": 6},
-            {"Ime": "Vilinski lokostrelec","Vloga": "spreten in zvest",             "# let v druščini": 12},
-            {"Ime": "Voditeljica upora",   "Vloga": "pogumna in strateška voditeljica", "# let v druščini": 2},
-            {"Ime": "Zeleni mojster",      "Vloga": "učitelj in vir discipline",    "# let v druščini": 20},
-            {"Ime": "Zlati robot",         "Vloga": "raztreseni in zvesti pomočnik","# let v druščini": 7},
-            {"Ime": "Zvesti prijatelj",    "Vloga": "zvesti podpornik in srce ekipe","# let v druščini": 4},
-            {"Ime": "Zvesti robot",        "Vloga": "iznajdljiv zvesti pomočnik",   "# let v druščini": 9},
-            {"Ime": "Škratovski bojevnik", "Vloga": "zvest in neustrašen",          "# let v druščini": 12},
-        ])
+        net.barnes_hut()  # physics enabled
 
         for node in G.nodes():
             val = metrics[size_metric][node]
             color = color_for_value(color_values[node], min_val, max_val)
-            size = norm_sizes[node]
-            label = node
-            if node == "TU STE VI":
-                shape = "star"
-            elif node in ["Sivi čarovnik", "Voditeljica upora", "Modri ravnatelj", "Zeleni mojster"]:
-                shape = "square"
-            else:
-                shape = "dot"
-            info_row = info_df[info_df["Ime"] == node]
-            if not info_row.empty:
-                vloga = info_row.iloc[0]["Vloga"]
-                staz = info_row.iloc[0]["# let v druščini"]
-            else:
-                vloga = ""
-                staz = ""
+            size = 50 + val * 30  # small natural scaling
 
-            tooltip = (
-            f"{label}\n"
-            f"Vloga: {vloga}\n"
-            f"Leta v druščini: {staz}\n"
-            "-------------------\n"
-            f"Degree: {degree[node]}\n"
-            f"In-Degree: {indeg[node]}\n"
-            f"Out-Degree: {outdeg[node]}\n"
-            f"Betweenness: {betweenness[node]:.3f}\n"
-            f"Closeness: {closeness[node]:.3f}\n"
-            f"PageRank: {pagerank[node]:.3f}\n"
-            f"Clustering: {clustering[node]:.3f}\n"
-            f"Coreness: {coreness[node]}"
-        )
+            label = node
+
+            # Special styling for TU STE VI
+            shape = "star" if node == "TU STE VI" else "dot"
+
             net.add_node(
                 node,
                 label=label,
@@ -987,17 +1057,19 @@ with tab7:
                 color=color,
                 size=size,
                 font={'size': 120},
-                title=tooltip,
+                title=label  # tooltip contains ONLY label
             )
 
+        # Add directed edges
         for u, v in G.edges():
             net.add_edge(
                 u, v,
                 color="gray",
-                width=3,
-                arrows={'to': {'enabled': True, 'scaleFactor': 8    }}
-            )
+                width=3,   # thicker edges
+                arrows={'to': {'enabled': True, 'scaleFactor': 8    }}  # ← larger arrows
+    )
 
+        # Generate HTML and display
         net.save_graph("interactive_network.html")
         HtmlFile = open("interactive_network.html", "r", encoding="utf-8")
         st.components.v1.html(HtmlFile.read(), height=750, scrolling=True)

@@ -1,0 +1,163 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: white;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "rgb(249,223,182)", "font": {"size": 120}, "id": "TU STE VI", "label": "TU STE VI", "shape": "star", "size": 50.0, "title": "TU STE VI\nVloga: \nLeta v dru\u0161\u010dini: \n-------------------\nDegree: 0\nIn-Degree: 0\nOut-Degree: 0\nBetweenness: 0.000\nCloseness: 0.000\nPageRank: 0.008\nClustering: 0.000\nCoreness: 0"}, {"color": "rgb(249,174,70)", "font": {"size": 120}, "id": "De\u010dek \u010darovnik", "label": "De\u010dek \u010darovnik", "shape": "dot", "size": 122.22222222222223, "title": "De\u010dek \u010darovnik\nVloga: premaga vse izzive\nLeta v dru\u0161\u010dini: 3\n-------------------\nDegree: 5\nIn-Degree: 3\nOut-Degree: 2\nBetweenness: 0.158\nCloseness: 0.334\nPageRank: 0.051\nClustering: 0.000\nCoreness: 3"}, {"color": "rgb(249,206,144)", "font": {"size": 120}, "id": "Pametna \u010darovnica", "label": "Pametna \u010darovnica", "shape": "dot", "size": 107.77777777777777, "title": "Pametna \u010darovnica\nVloga: vir znanja in logike\nLeta v dru\u0161\u010dini: 3\n-------------------\nDegree: 4\nIn-Degree: 2\nOut-Degree: 2\nBetweenness: 0.053\nCloseness: 0.365\nPageRank: 0.058\nClustering: 0.000\nCoreness: 3"}, {"color": "rgb(249,205,143)", "font": {"size": 120}, "id": "Modri ravnatelj", "label": "Modri ravnatelj", "shape": "square", "size": 122.22222222222223, "title": "Modri ravnatelj\nVloga: vodi druge da so bolj\u0161i\nLeta v dru\u0161\u010dini: 10\n-------------------\nDegree: 5\nIn-Degree: 3\nOut-Degree: 2\nBetweenness: 0.055\nCloseness: 0.334\nPageRank: 0.040\nClustering: 0.167\nCoreness: 3"}, {"color": "rgb(249,200,131)", "font": {"size": 120}, "id": "Mladi pilot", "label": "Mladi pilot", "shape": "dot", "size": 122.22222222222223, "title": "Mladi pilot\nVloga: pogumni raziskovalec\nLeta v dru\u0161\u010dini: 1\n-------------------\nDegree: 5\nIn-Degree: 3\nOut-Degree: 2\nBetweenness: 0.072\nCloseness: 0.434\nPageRank: 0.069\nClustering: 0.000\nCoreness: 3"}, {"color": "rgb(249,204,138)", "font": {"size": 120}, "id": "Tihotapec", "label": "Tihotapec", "shape": "dot", "size": 122.22222222222223, "title": "Tihotapec\nVloga: samosvoj\nLeta v dru\u0161\u010dini: 6\n-------------------\nDegree: 5\nIn-Degree: 3\nOut-Degree: 2\nBetweenness: 0.061\nCloseness: 0.401\nPageRank: 0.079\nClustering: 0.000\nCoreness: 3"}, {"color": "rgb(249,214,163)", "font": {"size": 120}, "id": "Zeleni mojster", "label": "Zeleni mojster", "shape": "square", "size": 93.33333333333334, "title": "Zeleni mojster\nVloga: u\u010ditelj in vir discipline\nLeta v dru\u0161\u010dini: 20\n-------------------\nDegree: 3\nIn-Degree: 1\nOut-Degree: 2\nBetweenness: 0.027\nCloseness: 0.211\nPageRank: 0.017\nClustering: 0.000\nCoreness: 3"}, {"color": "rgb(249,162,43)", "font": {"size": 120}, "id": "Nosilec prstana", "label": "Nosilec prstana", "shape": "dot", "size": 180.0, "title": "Nosilec prstana\nVloga: odgovoren vendar zadr\u017ean\nLeta v dru\u0161\u010dini: 2\n-------------------\nDegree: 9\nIn-Degree: 5\nOut-Degree: 4\nBetweenness: 0.198\nCloseness: 0.434\nPageRank: 0.094\nClustering: 0.133\nCoreness: 3"}, {"color": "rgb(249,203,137)", "font": {"size": 120}, "id": "Sivi \u010darovnik", "label": "Sivi \u010darovnik", "shape": "square", "size": 107.77777777777777, "title": "Sivi \u010darovnik\nVloga: povezuje ljudi in jih vodi\nLeta v dru\u0161\u010dini: 30\n-------------------\nDegree: 4\nIn-Degree: 2\nOut-Degree: 2\nBetweenness: 0.064\nCloseness: 0.349\nPageRank: 0.040\nClustering: 0.000\nCoreness: 3"}, {"color": "rgb(249,196,122)", "font": {"size": 120}, "id": "Postopa\u010d", "label": "Postopa\u010d", "shape": "dot", "size": 107.77777777777777, "title": "Postopa\u010d\nVloga: skriti vodja z notranjim bojem\nLeta v dru\u0161\u010dini: 9\n-------------------\nDegree: 4\nIn-Degree: 2\nOut-Degree: 2\nBetweenness: 0.085\nCloseness: 0.373\nPageRank: 0.055\nClustering: 0.167\nCoreness: 3"}, {"color": "rgb(249,181,88)", "font": {"size": 120}, "id": "Vilinski lokostrelec", "label": "Vilinski lokostrelec", "shape": "dot", "size": 151.11111111111111, "title": "Vilinski lokostrelec\nVloga: spreten in zvest\nLeta v dru\u0161\u010dini: 12\n-------------------\nDegree: 7\nIn-Degree: 4\nOut-Degree: 3\nBetweenness: 0.133\nCloseness: 0.412\nPageRank: 0.087\nClustering: 0.067\nCoreness: 3"}, {"color": "rgb(249,200,129)", "font": {"size": 120}, "id": "\u0160kratovski bojevnik", "label": "\u0160kratovski bojevnik", "shape": "dot", "size": 107.77777777777777, "title": "\u0160kratovski bojevnik\nVloga: zvest in neustra\u0161en\nLeta v dru\u0161\u010dini: 12\n-------------------\nDegree: 4\nIn-Degree: 1\nOut-Degree: 3\nBetweenness: 0.074\nCloseness: 0.251\nPageRank: 0.030\nClustering: 0.000\nCoreness: 3"}, {"color": "rgb(249,200,131)", "font": {"size": 120}, "id": "Zvesti robot", "label": "Zvesti robot", "shape": "dot", "size": 93.33333333333334, "title": "Zvesti robot\nVloga: iznajdljiv zvesti pomo\u010dnik\nLeta v dru\u0161\u010dini: 9\n-------------------\nDegree: 3\nIn-Degree: 1\nOut-Degree: 2\nBetweenness: 0.073\nCloseness: 0.287\nPageRank: 0.033\nClustering: 0.000\nCoreness: 3"}, {"color": "rgb(249,167,55)", "font": {"size": 120}, "id": "Voditeljica upora", "label": "Voditeljica upora", "shape": "square", "size": 136.66666666666669, "title": "Voditeljica upora\nVloga: pogumna in strate\u0161ka voditeljica\nLeta v dru\u0161\u010dini: 2\n-------------------\nDegree: 6\nIn-Degree: 3\nOut-Degree: 3\nBetweenness: 0.181\nCloseness: 0.382\nPageRank: 0.087\nClustering: 0.000\nCoreness: 3"}, {"color": "rgb(249,206,144)", "font": {"size": 120}, "id": "Temni vitez", "label": "Temni vitez", "shape": "dot", "size": 93.33333333333334, "title": "Temni vitez\nVloga: konfliktna oseba\nLeta v dru\u0161\u010dini: 13\n-------------------\nDegree: 3\nIn-Degree: 1\nOut-Degree: 2\nBetweenness: 0.054\nCloseness: 0.309\nPageRank: 0.038\nClustering: 0.000\nCoreness: 2"}, {"color": "rgb(249,200,130)", "font": {"size": 120}, "id": "Zvesti prijatelj", "label": "Zvesti prijatelj", "shape": "dot", "size": 122.22222222222223, "title": "Zvesti prijatelj\nVloga: zvesti podpornik in srce ekipe\nLeta v dru\u0161\u010dini: 4\n-------------------\nDegree: 5\nIn-Degree: 2\nOut-Degree: 3\nBetweenness: 0.073\nCloseness: 0.382\nPageRank: 0.062\nClustering: 0.333\nCoreness: 3"}, {"color": "rgb(249,168,58)", "font": {"size": 120}, "id": "Zlati robot", "label": "Zlati robot", "shape": "dot", "size": 165.55555555555554, "title": "Zlati robot\nVloga: raztreseni in zvesti pomo\u010dnik\nLeta v dru\u0161\u010dini: 7\n-------------------\nDegree: 8\nIn-Degree: 5\nOut-Degree: 3\nBetweenness: 0.176\nCloseness: 0.446\nPageRank: 0.103\nClustering: 0.100\nCoreness: 3"}, {"color": "rgb(249,223,182)", "font": {"size": 120}, "id": "Prebrisani u\u010ditelj", "label": "Prebrisani u\u010ditelj", "shape": "dot", "size": 78.88888888888889, "title": "Prebrisani u\u010ditelj\nVloga: povezovalec\nLeta v dru\u0161\u010dini: 12\n-------------------\nDegree: 2\nIn-Degree: 0\nOut-Degree: 2\nBetweenness: 0.000\nCloseness: 0.000\nPageRank: 0.008\nClustering: 1.000\nCoreness: 2"}, {"color": "rgb(249,188,102)", "font": {"size": 120}, "id": "Pogumna princesa", "label": "Pogumna princesa", "shape": "dot", "size": 107.77777777777777, "title": "Pogumna princesa\nVloga: odlo\u010dna in napredna\nLeta v dru\u0161\u010dini: 1\n-------------------\nDegree: 4\nIn-Degree: 2\nOut-Degree: 2\nBetweenness: 0.113\nCloseness: 0.365\nPageRank: 0.042\nClustering: 0.000\nCoreness: 3"}]);
+                  edges = new vis.DataSet([{"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "De\u010dek \u010darovnik", "to": "\u0160kratovski bojevnik", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "De\u010dek \u010darovnik", "to": "Voditeljica upora", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Pametna \u010darovnica", "to": "Vilinski lokostrelec", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Pametna \u010darovnica", "to": "Zlati robot", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Modri ravnatelj", "to": "Nosilec prstana", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Modri ravnatelj", "to": "Vilinski lokostrelec", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Mladi pilot", "to": "Tihotapec", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Mladi pilot", "to": "Postopa\u010d", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Tihotapec", "to": "Mladi pilot", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Tihotapec", "to": "Voditeljica upora", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zeleni mojster", "to": "Mladi pilot", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zeleni mojster", "to": "Sivi \u010darovnik", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Nosilec prstana", "to": "Modri ravnatelj", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Nosilec prstana", "to": "Mladi pilot", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Nosilec prstana", "to": "Zlati robot", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Nosilec prstana", "to": "Pogumna princesa", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Sivi \u010darovnik", "to": "Tihotapec", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Sivi \u010darovnik", "to": "Zlati robot", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Postopa\u010d", "to": "Vilinski lokostrelec", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Postopa\u010d", "to": "Voditeljica upora", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Vilinski lokostrelec", "to": "Pametna \u010darovnica", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Vilinski lokostrelec", "to": "Sivi \u010darovnik", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Vilinski lokostrelec", "to": "Zvesti prijatelj", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "\u0160kratovski bojevnik", "to": "De\u010dek \u010darovnik", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "\u0160kratovski bojevnik", "to": "Modri ravnatelj", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "\u0160kratovski bojevnik", "to": "Zeleni mojster", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zvesti robot", "to": "Vilinski lokostrelec", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zvesti robot", "to": "Pogumna princesa", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Voditeljica upora", "to": "Pametna \u010darovnica", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Voditeljica upora", "to": "Tihotapec", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Voditeljica upora", "to": "Zvesti robot", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Temni vitez", "to": "De\u010dek \u010darovnik", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Temni vitez", "to": "Zlati robot", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zvesti prijatelj", "to": "Nosilec prstana", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zvesti prijatelj", "to": "Postopa\u010d", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zvesti prijatelj", "to": "Zlati robot", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zlati robot", "to": "Nosilec prstana", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zlati robot", "to": "Temni vitez", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Zlati robot", "to": "Zvesti prijatelj", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Prebrisani u\u010ditelj", "to": "Modri ravnatelj", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Prebrisani u\u010ditelj", "to": "Nosilec prstana", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Pogumna princesa", "to": "De\u010dek \u010darovnik", "width": 3}, {"arrows": {"to": {"enabled": true, "scaleFactor": 8}}, "color": "gray", "from": "Pogumna princesa", "to": "Nosilec prstana", "width": 3}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "barnesHut": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.3,
+            "damping": 0.09,
+            "gravitationalConstant": -80000,
+            "springConstant": 0.001,
+            "springLength": 250
+        },
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
