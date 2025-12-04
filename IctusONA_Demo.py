@@ -519,6 +519,21 @@ with tab4:
             cluster_coef = np.array(g.transitivity_local_undirected(mode="zero"))
             coreness = np.array(g.coreness(mode="all"))
 
+            # --- Community detection (prefer Louvain / multilevel, fallback to walktrap)
+            try:
+                communities = g.community_multilevel(weights="weight")
+                membership = np.array(communities.membership)
+                num_communities = len(set(membership))
+            except Exception:
+                try:
+                    communities = g.community_walktrap(weights="weight").as_clustering()
+                    membership = np.array(communities.membership)
+                    num_communities = len(set(membership))
+                except Exception:
+                    membership = np.zeros(len(nodes), dtype=int)
+                    num_communities = 1
+
+
             node_stats = pd.DataFrame({
                 "Node": nodes,
                 "Weighted Degree": np.round(wdeg, 3),
@@ -529,6 +544,7 @@ with tab4:
                 "Closeness": np.round(close, 3),
                 "Clustering": np.round(cluster_coef, 3),
                 "Coreness": coreness,
+                "Community": membership,
             }).sort_values("Betweenness", ascending=False)
 
             density = g.density()
@@ -541,7 +557,8 @@ with tab4:
                 "Reciprocity %": [np.round(reciprocity * 100, 2)],
                 "Edges": [num_edges],
                 "Avg. Degree": [np.round(avg_deg, 2)],
-                "Shortest Path": [np.round(avg_path, 3)]
+                "Shortest Path": [np.round(avg_path, 3)],
+                "Communities": [int(num_communities)]
             })
 
             G = nx.DiGraph()
@@ -794,7 +811,9 @@ with tab7:
         "Funkcionalnost vključuje tudi scenarijsko analizo, kjer je mogoče simulirati izstop izbranih junakov ter oceniti, kako bi takšen dogodek " \
         "vplival na celotno omrežje, povezave in odpornost druščine. Zavihek tako zagotavlja intuitiven, vizualno bogat in strateško uporaben " \
         "vpogled v organizacijske odnose, ki podpira vodstvene odločitve, prepoznavanje talentov, upravljanje tveganj ter načrtovanje izboljšav v " \
-        "komunikacijskih tokovih.")
+        "komunikacijskih tokovih.  " \
+        "Z 🟧 smo označili vodilne osebe v druščini.")
+
         st.write("**Izberite omrežje:**")
 
         matrix_options = ["Zaupanje", "Svetovanje", "Prijateljstvo"]
@@ -815,7 +834,7 @@ with tab7:
             size_metric = st.selectbox(
                 "**Velikost kroga:**",
                 ["Degree", "In-Degree", "Out-Degree", "Betweenness", "Closeness",
-                "PageRank", "Clustering", "Coreness"],
+                "PageRank", "Clustering", "Coreness","Community"],
                 index=0,
                 key="size_metric_tab7"
             )
@@ -823,11 +842,19 @@ with tab7:
             color_metric = st.selectbox(
                 "**Barva kroga:**",
                 ["Degree", "In-Degree", "Out-Degree", "Betweenness", "Closeness",
-                "PageRank", "Clustering", "Coreness"],
+                "PageRank", "Clustering", "Coreness","Community"],
                 index=3,
                 key="color_metric_tab7"
             )
 
+        col3 = st.columns(1)[0]
+        with col3:
+            label_color_metric = st.selectbox(
+                "**Barva labele:**",
+                ["Izvorna skupina", "Community", "Coreness"],
+                index=0,
+                key="label_color_metric_tab7"
+            )
 
         removed_nodes = st.multiselect(
             "**Kaj se zgodi, če junak zapusti druščino:**",
@@ -852,7 +879,8 @@ with tab7:
             **Reciprocity %** - Izraža, kolikšen delež odnosov je obojestranskih, kar kaže na stabilnost, zaupanje in enakovrednost odnosov.  
             **Edges** - Predstavlja skupno število vseh medosebnih povezav, kar kaže na splošno aktivnost in povezanost v omrežju.  
             **Avg. Degree** - Pokaže povprečno vključenost zaposlenih ter daje vpogled v tipično stopnjo sodelovanja v organizaciji.    
-            **Shortest Path** - Ocenjuje povprečno razdaljo med osebami, kar vpliva na hitrost in učinkovitost pretoka informacij v organizaciji.    
+            **Shortest Path** - Ocenjuje povprečno razdaljo med osebami, kar vpliva na hitrost in učinkovitost pretoka informacij v organizaciji.  
+            **E-I index** - Pozitiven indeks pomeni odprtost, sodelovanje, pretok znanja, medtem ko negativen specializacijo ali morebitno izoliranost.                
             """)
 
 
@@ -864,6 +892,36 @@ with tab7:
         "Svetovanje": st.session_state["advice_matrix"],
         "Prijateljstvo": st.session_state["friends_matrix"]
         }
+
+# -----------------------------------------
+# MANUALLY DEFINE SKUPINA (GROUP) PER NAME
+# -----------------------------------------
+
+        skupina = {
+            "Deček čarovnik": "Skupina 1",
+            "Pametna čarovnica": "Skupina 1",
+            "Modri ravnatelj": "Skupina 1",
+            "Prebrisani učitelj": "Skupina 1",
+            "TU STE VI": "Skupina 1",
+
+            "Mladi pilot": "Skupina 2",
+            "Tihotapec": "Skupina 2",
+            "Zeleni mojster": "Skupina 2",
+            "Zvesti robot": "Skupina 2",
+            "Voditeljica upora": "Skupina 2",
+            "Temni vitez": "Skupina 2",
+            "Zlati robot": "Skupina 2",
+            "Pogumna princesa": "Skupina 2",
+
+            "Nosilec prstana": "Skupina 3",
+            "Sivi čarovnik": "Skupina 3",
+            "Postopač": "Skupina 3",
+            "Vilinski lokostrelec": "Skupina 3",
+            "Škratovski bojevnik": "Skupina 3",
+            "Zvesti prijatelj": "Skupina 3"
+ 
+        }
+
 
         M = matrices[matrix_choice].copy()
 
@@ -883,6 +941,66 @@ with tab7:
         except:
             coreness = {n: 0 for n in G.nodes()}
 
+        # --- Community detection for interactive view (use igraph multilevel where possible)
+        try:
+            g_ig = ig.Graph.Adjacency((M.values > 0).tolist(), mode="directed")
+            # Try multilevel (Louvain) first
+            try:
+                comms = g_ig.community_multilevel()
+            except Exception:
+                comms = g_ig.community_walktrap().as_clustering()
+            membership_map = {name: int(comms.membership[i]) for i, name in enumerate(M.index)}
+        except Exception:
+            membership_map = {n: 0 for n in G.nodes()}
+
+        # community membership will be added into `metrics` below
+
+        # -----------------------------------------
+        # E–I INDEX FOR INDIVIDUALS
+        # -----------------------------------------
+
+        EI_individual = {}
+
+        for node in G.nodes():
+            group = skupina[node]
+            internal = 0
+            external = 0
+
+            for nbr in G.successors(node):  # directed outgoing ties
+                if skupina[nbr] == group:
+                    internal += 1
+                else:
+                    external += 1
+
+            if internal + external > 0:
+                EI_individual[node] = (external - internal) / (external + internal)
+            else:
+                EI_individual[node] = 0
+
+
+        # -----------------------------------------
+        # E–I INDEX FOR GROUPS
+        # -----------------------------------------
+
+        all_groups = set(skupina.values())
+        group_internal = {g: 0 for g in all_groups}
+        group_external = {g: 0 for g in all_groups}
+
+        for u, v in G.edges():
+            if skupina[u] == skupina[v]:
+                group_internal[skupina[u]] += 1
+            else:
+                group_external[skupina[u]] += 1
+
+        EI_group = {}
+        for g in all_groups:
+            I = group_internal[g]
+            E = group_external[g]
+            EI_group[g] = (E - I) / (E + I) if (E + I) > 0 else 0
+
+
+
+
         metrics = {
             "Degree": degree,
             "In-Degree": indeg,
@@ -891,7 +1009,9 @@ with tab7:
             "Closeness": closeness,
             "PageRank": pagerank,
             "Clustering": clustering,
-            "Coreness": coreness
+            "Coreness": coreness,
+            "Community": membership_map,
+            "E-I indeks": EI_individual
         }
 
         def color_for_value(val, vmin, vmax):
@@ -947,6 +1067,35 @@ with tab7:
             {"Ime": "Škratovski bojevnik", "Vloga": "zvest in neustrašen",          "# let v druščini": 12},
         ])
 
+        # Pretvori skupino v številke za barvanje
+        if label_color_metric == "Izvorna skupina":
+            label_color_values = {n: hash(skupina[n]) % 5 for n in G.nodes()}  # 5 barvnih skupin
+        elif label_color_metric == "Community":
+            label_color_values = membership_map
+        else:  # Coreness
+            label_color_values = coreness
+
+        # Izračun minimum–maximum za normalizacijo
+        label_min = min(label_color_values.values())
+        label_max = max(label_color_values.values())
+
+        def label_color_for_value(val, vmin, vmax):
+            # barve za label
+            if vmax == vmin:
+                return "black"
+            t = (val - vmin) / (vmax - vmin)
+
+            # prehod: črna → rjava → oranžna → bela
+            from_color = (10, 10, 10)
+            to_color   = (255, 180, 80)
+
+            r = int(from_color[0] + t * (to_color[0] - from_color[0]))
+            g = int(from_color[1] + t * (to_color[1] - from_color[1]))
+            b = int(from_color[2] + t * (to_color[2] - from_color[2]))
+
+            return f"rgb({r},{g},{b})"
+
+
         for node in G.nodes():
             val = metrics[size_metric][node]
             color = color_for_value(color_values[node], min_val, max_val)
@@ -968,8 +1117,11 @@ with tab7:
 
             tooltip = (
             f"{label}\n"
+            f"Community: {metrics.get('Community', {}).get(node, 0)}\n"
             f"Vloga: {vloga}\n"
             f"Leta v druščini: {staz}\n"
+            f"Del izvrone skupine: {skupina[node]}\n"
+            f"E-I indeks skupine: {EI_group[skupina[node]]:.3f}\n"
             "-------------------\n"
             f"Degree: {degree[node]}\n"
             f"In-Degree: {indeg[node]}\n"
@@ -978,15 +1130,23 @@ with tab7:
             f"Closeness: {closeness[node]:.3f}\n"
             f"PageRank: {pagerank[node]:.3f}\n"
             f"Clustering: {clustering[node]:.3f}\n"
+            f"E-I indeks: {EI_individual[node]:.3f}\n"
             f"Coreness: {coreness[node]}"
         )
+            
+            label_color = label_color_for_value(
+            label_color_values[node],
+            label_min,
+            label_max
+        )
+            
             net.add_node(
                 node,
                 label=label,
                 shape=shape,
                 color=color,
                 size=size,
-                font={'size': 120},
+                font={'size': 120, 'color': label_color},
                 title=tooltip,
             )
 
