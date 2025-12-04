@@ -1067,33 +1067,37 @@ with tab7:
             {"Ime": "Škratovski bojevnik", "Vloga": "zvest in neustrašen",          "# let v druščini": 12},
         ])
 
-        # Pretvori skupino v številke za barvanje
+
+        # Pretvori metriko v barve label
         if label_color_metric == "Izvorna skupina":
-            label_color_values = {n: hash(skupina[n]) % 5 for n in G.nodes()}  # 5 barvnih skupin
+            # Categorical: fixed colors per group
+            label_color_values = {
+                n: {"Skupina 1": "red", "Skupina 2": "blue", "Skupina 3": "green"}[skupina[n]]
+                for n in G.nodes()
+            }
+            use_gradient = False  # categorical, no gradient needed
         elif label_color_metric == "Community":
             label_color_values = membership_map
+            use_gradient = True
         else:  # Coreness
             label_color_values = coreness
+            use_gradient = True
 
-        # Izračun minimum–maximum za normalizacijo
-        label_min = min(label_color_values.values())
-        label_max = max(label_color_values.values())
+        # If numeric, compute min/max for gradient scaling
+        if use_gradient:
+            label_min = min(label_color_values.values())
+            label_max = max(label_color_values.values())
 
-        def label_color_for_value(val, vmin, vmax):
-            # barve za label
-            if vmax == vmin:
-                return "black"
-            t = (val - vmin) / (vmax - vmin)
-
-            # prehod: črna → rjava → oranžna → bela
-            from_color = (10, 10, 10)
-            to_color   = (255, 180, 80)
-
-            r = int(from_color[0] + t * (to_color[0] - from_color[0]))
-            g = int(from_color[1] + t * (to_color[1] - from_color[1]))
-            b = int(from_color[2] + t * (to_color[2] - from_color[2]))
-
-            return f"rgb({r},{g},{b})"
+            def label_color_for_value(val, vmin, vmax):
+                if vmax == vmin:
+                    return "black"
+                t = (val - vmin) / (vmax - vmin)
+                from_color = (10, 10, 10)
+                to_color   = (255, 180, 80)
+                r = int(from_color[0] + t * (to_color[0] - from_color[0]))
+                g = int(from_color[1] + t * (to_color[1] - from_color[1]))
+                b = int(from_color[2] + t * (to_color[2] - from_color[2]))
+                return f"rgb({r},{g},{b})"
 
 
         for node in G.nodes():
@@ -1134,11 +1138,10 @@ with tab7:
             f"Coreness: {coreness[node]}"
         )
             
-            label_color = label_color_for_value(
-            label_color_values[node],
-            label_min,
-            label_max
-        )
+            if use_gradient:
+                label_color = label_color_for_value(label_color_values[node], label_min, label_max)
+            else:
+                label_color = label_color_values[node]  # categorical color
             
             net.add_node(
                 node,
